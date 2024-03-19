@@ -1,0 +1,17 @@
+FROM golang:alpine as builder
+WORKDIR /build
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories
+RUN apk add --no-cache upx 
+COPY . .
+RUN go env -w GO111MODULE=auto && \
+    go env -w GOPROXY=https://goproxy.cn,direct && \
+    go build -ldflags="-s -w" -o /temp-files && \
+    upx --lzma /temp-files
+
+FROM alpine
+EXPOSE 5000/tcp
+WORKDIR /data
+VOLUME /data
+COPY --from=builder /temp-files /temp-files
+RUN chmod +x /temp-files
+ENTRYPOINT [ "/temp-files" ]
